@@ -1,11 +1,11 @@
 """
-Inbound port interface for Item operations.
-Defines the use cases that external actors can request from the domain.
-This represents the "driving" side of the hexagonal architecture.
+Интерфейс входящего порта для операций с элементами.
+Определяет use case'ы, которые внешние акторы могут запросить у домена.
+Представляет "управляющую" сторону гексагональной архитектуры.
 """
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Coroutine, Any, Protocol
 
 from src.application.dtos.item_dtos import (
     ItemCreateDTO, 
@@ -16,103 +16,97 @@ from src.application.dtos.item_dtos import (
 )
 
 
-class ItemServicePort(ABC):
+class ItemServicePort(Protocol):
     """
-    Inbound port interface for item-related use cases.
+    Протокол входящего порта для use case'ов, связанных с элементами.
     
-    This interface defines what the domain can do when triggered 
-    from external actors (web controllers, CLI, message handlers, etc.).
-    It represents the application's "API" in the business sense.
+    Этот интерфейс определяет, что может делать домен при активации 
+    внешними акторами (веб-контроллеры, CLI, обработчики сообщений и т.д.).
+    Он представляет "API" приложения в бизнес-смысле.
     
-    Each method represents a specific use case that the domain supports.
+    Каждый метод представляет конкретный use case, который поддерживает домен.
     """
     
-    @abstractmethod
     async def create_item(self, item_data: ItemCreateDTO) -> ItemResponseDTO:
         """
-        Create a new item.
+        Создание нового элемента.
         
-        Args:
-            item_data: Data for creating the item
+        Аргументы:
+            item_data: Данные для создания элемента
             
-        Returns:
-            Created item response
+        Возвращает:
+            Ответ с данными созданного элемента
             
-        Raises:
-            InvalidItemDataError: If item data is invalid
-            DuplicateItemError: If item with same name already exists
+        Исключения:
+            InvalidItemDataError: При некорректных данных элемента
+            DuplicateItemError: При существовании элемента с таким же названием
         """
-        pass
+        ...
     
-    @abstractmethod
     async def get_item_by_id(self, item_id: int) -> ItemResponseDTO:
         """
-        Retrieve an item by its ID.
+        Получение элемента по его идентификатору.
         
-        Args:
-            item_id: Unique identifier of the item
+        Аргументы:
+            item_id: Уникальный идентификатор элемента
             
-        Returns:
-            Item response
+        Возвращает:
+            Ответ с данными элемента
             
-        Raises:
-            ItemNotFoundError: If item is not found
+        Исключения:
+            ItemNotFoundError: При отсутствии элемента
         """
-        pass
+        ...
     
-    @abstractmethod
     async def get_all_items(self) -> List[ItemResponseDTO]:
         """
-        Retrieve all items.
+        Получение всех элементов.
         
-        Returns:
-            List of item responses
+        Возвращает:
+            Список ответов с данными всех элементов
         """
-        pass
+        ...
     
-    @abstractmethod
     async def update_item(self, item_id: int, item_data: ItemUpdateDTO) -> ItemResponseDTO:
         """
-        Update an existing item.
+        Обновление существующего элемента.
         
-        Args:
-            item_id: Unique identifier of the item
-            item_data: Data for updating the item
+        Аргументы:
+            item_id: Уникальный идентификатор элемента
+            item_data: Данные для обновления элемента
             
-        Returns:
-            Updated item response
+        Возвращает:
+            Ответ с данными обновленного элемента
             
-        Raises:
-            ItemNotFoundError: If item is not found
-            InvalidItemDataError: If item data is invalid
+        Исключения:
+            ItemNotFoundError: При отсутствии элемента
+            InvalidItemDataError: При некорректных данных элемента
         """
-        pass
+        ...
     
-    @abstractmethod
     async def delete_item(self, item_id: int) -> ItemDeleteResponseDTO:
         """
-        Delete an item.
+        Удаление элемента.
         
-        Args:
-            item_id: Unique identifier of the item
+        Аргументы:
+            item_id: Уникальный идентификатор элемента
             
-        Returns:
-            Deletion confirmation response
+        Возвращает:
+            Подтверждение удаления элемента
             
-        Raises:
-            ItemNotFoundError: If item is not found
+        Исключения:
+            ItemNotFoundError: При отсутствии элемента
         """
-        pass
+        ...
     
-    @abstractmethod
     async def search_items(self, search_data: ItemSearchDTO) -> List[ItemResponseDTO]:
         """
-        Search items by query.
+        Поиск элементов по запросу.
         
-        Args:
-            search_data: Search parameters
+        Аргументы:
+            search_data: Параметры поиска
             
-        Returns:
-            List of matching item responses
+        Возвращает:
+            Список найденных элементов
         """
-        pass
+        ...

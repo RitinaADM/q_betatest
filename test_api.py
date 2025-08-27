@@ -6,7 +6,9 @@ Simple API test script to verify the hexagonal architecture implementation.
 import asyncio
 import aiohttp
 import json
+import pytest
 
+@pytest.mark.asyncio
 async def test_api():
     """Test various API endpoints."""
     base_url = "http://localhost:8000"

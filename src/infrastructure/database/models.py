@@ -14,7 +14,7 @@ class ItemModel(Base):
     __tablename__ = "items"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(100), nullable=False, index=True)
+    name = Column(String(100), nullable=False, index=True, unique=True)  # Added unique constraint
     description = Column(Text, nullable=True)
     price = Column(Numeric(10, 2), nullable=False)
     in_stock = Column(Boolean, default=True, nullable=False)

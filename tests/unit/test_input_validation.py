@@ -51,7 +51,7 @@ class TestItemEntityValidation:
     
     def test_item_name_validation_empty_string(self):
         """Test item name validation with empty string."""
-        with pytest.raises(ValueError, match="Item name cannot be empty"):
+        with pytest.raises(ValueError, match="Название элемента не может быть пустым"):
             Item(
                 id=1,
                 name="",
@@ -62,7 +62,7 @@ class TestItemEntityValidation:
     
     def test_item_name_validation_whitespace_only(self):
         """Test item name validation with whitespace only."""
-        with pytest.raises(ValueError, match="Item name cannot be empty"):
+        with pytest.raises(ValueError, match="Название элемента не может быть пустым"):
             Item(
                 id=1,
                 name="   ",
@@ -74,7 +74,7 @@ class TestItemEntityValidation:
     def test_item_name_validation_very_long(self):
         """Test item name validation with very long name."""
         long_name = "x" * 101  # Over 100 character limit
-        with pytest.raises(ValueError, match="Item name cannot exceed 100 characters"):
+        with pytest.raises(ValueError, match="Название элемента не может превышать 100 символов"):
             Item(
                 id=1,
                 name=long_name,
@@ -131,7 +131,7 @@ class TestItemEntityValidation:
         
         # Description validation happens in update_description method
         long_description = "x" * 501  # Over 500 character limit
-        with pytest.raises(ValueError, match="Item description cannot exceed 500 characters"):
+        with pytest.raises(ValueError, match="Описание элемента не может превышать 500 символов"):
             item.update_description(long_description)
     
     def test_item_price_validation_zero(self):
@@ -148,7 +148,7 @@ class TestItemEntityValidation:
     
     def test_item_price_validation_negative(self):
         """Test item price validation with negative value."""
-        with pytest.raises(ValueError, match="Item price cannot be negative"):
+        with pytest.raises(ValueError, match="Цена элемента не может быть отрицательной"):
             Item(
                 id=1,
                 name="Valid Item",
@@ -160,7 +160,7 @@ class TestItemEntityValidation:
     def test_item_price_validation_very_large(self):
         """Test item price validation with very large value."""
         # Test just over the limit
-        with pytest.raises(ValueError, match="Item price cannot exceed 999999.99"):
+        with pytest.raises(ValueError, match="Цена элемента не может превышать 999999.99"):
             Item(
                 id=1,
                 name="Expensive Item",
@@ -220,7 +220,7 @@ class TestItemEntityValidation:
         assert item.price == Decimal("39.99")
         
         # Test price update with invalid value
-        with pytest.raises(ValueError, match="Item price cannot be negative"):
+        with pytest.raises(ValueError, match="Цена элемента не может быть отрицательной"):
             item.update_price(Decimal("-5.00"))
         
         # Test stock status updates

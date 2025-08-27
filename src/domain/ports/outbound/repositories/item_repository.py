@@ -1,85 +1,107 @@
+"""
+Интерфейс исходящего порта репозитория для доменной сущности Item.
+Определяет контракт для операций персистентности данных.
+Представляет "управляемую" сторону гексагональной архитектуры.
+"""
+
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Protocol, runtime_checkable
 from src.domain.entities.item import Item
 
 
-class ItemRepository(ABC):
+@runtime_checkable
+class ItemRepository(Protocol):
     """
-    Abstract repository interface for Item entity.
-    Defines the contract for data persistence operations.
+    Протокол репозитория для доменной сущности Item.
+    Определяет контракт для операций персистентности данных.
+    
+    Этот протокол определяет, как домен может взаимодействовать с системами хранения
+    данных (базы данных, файловые системы, внешние API), не завися от конкретной реализации.
     """
     
-    @abstractmethod
     async def create(self, item: Item) -> Item:
         """
-        Create a new item in the repository.
+        Создание нового элемента в репозитории.
         
-        Args:
-            item: Item entity to create
+        Аргументы:
+            item: Доменная сущность для создания
             
-        Returns:
-            Created item with assigned ID
+        Возвращает:
+            Созданный элемент с назначенным ID
+            
+        Исключения:
+            RepositoryError: При ошибках создания
         """
-        pass
+        ...
     
-    @abstractmethod
     async def get_by_id(self, item_id: int) -> Optional[Item]:
         """
-        Retrieve an item by its ID.
+        Получение элемента по его идентификатору.
         
-        Args:
-            item_id: Unique identifier of the item
+        Аргументы:
+            item_id: Уникальный идентификатор элемента
             
-        Returns:
-            Item if found, None otherwise
+        Возвращает:
+            Найденный элемент или None, если не найден
+            
+        Исключения:
+            RepositoryError: При ошибках поиска
         """
-        pass
+        ...
     
-    @abstractmethod
     async def get_all(self) -> List[Item]:
         """
-        Retrieve all items from the repository.
+        Получение всех элементов из репозитория.
         
-        Returns:
-            List of all items
+        Возвращает:
+            Список всех элементов
+            
+        Исключения:
+            RepositoryError: При ошибках получения
         """
-        pass
+        ...
     
-    @abstractmethod
     async def update(self, item: Item) -> Optional[Item]:
         """
-        Update an existing item in the repository.
+        Обновление существующего элемента в репозитории.
         
-        Args:
-            item: Item entity with updated data
+        Аргументы:
+            item: Доменная сущность с обновленными данными
             
-        Returns:
-            Updated item if found, None otherwise
+        Возвращает:
+            Обновленный элемент или None, если не найден
+            
+        Исключения:
+            RepositoryError: При ошибках обновления
         """
-        pass
+        ...
     
-    @abstractmethod
     async def delete(self, item_id: int) -> bool:
         """
-        Delete an item from the repository.
+        Удаление элемента из репозитория.
         
-        Args:
-            item_id: Unique identifier of the item to delete
+        Аргументы:
+            item_id: Уникальный идентификатор элемента для удаления
             
-        Returns:
-            True if item was deleted, False if not found
+        Возвращает:
+            True, если элемент был удален, False, если не найден
+            
+        Исключения:
+            RepositoryError: При ошибках удаления
         """
-        pass
+        ...
     
-    @abstractmethod
     async def search_by_name(self, query: str) -> List[Item]:
         """
-        Search items by name containing the query string.
+        Поиск элементов по названию, содержащему поисковую строку.
         
-        Args:
-            query: Search query string
+        Аргументы:
+            query: Поисковая строка
             
-        Returns:
-            List of items matching the search criteria
+        Возвращает:
+            Список элементов, соответствующих критериям поиска
+            
+        Исключения:
+            RepositoryError: При ошибках поиска
         """
-        pass
+        ...

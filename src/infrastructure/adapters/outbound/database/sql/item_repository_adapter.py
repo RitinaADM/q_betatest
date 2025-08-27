@@ -32,6 +32,11 @@ class SQLAlchemyItemRepositoryAdapter(ItemRepository):
             DuplicateItemError: If item with same name already exists
         """
         try:
+            # Check for existing item with same name first
+            existing = await self.exists_by_name(item.name)
+            if existing:
+                raise DuplicateItemError(item.name)
+            
             # Convert domain entity to database model
             db_item = ItemModel.from_domain_entity(item)
             
@@ -43,9 +48,12 @@ class SQLAlchemyItemRepositoryAdapter(ItemRepository):
             # Convert back to domain entity
             return db_item.to_domain_entity()
             
-        except IntegrityError:
+        except IntegrityError as e:
             await self._session.rollback()
-            raise DuplicateItemError(item.name)
+            # Check if it's a duplicate name constraint violation
+            if "UNIQUE constraint failed" in str(e) or "name" in str(e).lower():
+                raise DuplicateItemError(item.name)
+            raise  # Re-raise other integrity errors
     
     async def get_by_id(self, item_id: int) -> Optional[Item]:
         """

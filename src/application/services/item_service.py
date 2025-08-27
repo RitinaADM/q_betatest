@@ -1,10 +1,9 @@
 """
-Implementation of the Item Service use cases.
-Handles item-related business operations and coordinates with domain and infrastructure.
+Реализация сервиса элементов с использованием use case'ов.
+Оркестрирует выполнение бизнес-логики через отдельные use case классы.
 """
 
 from typing import List
-from decimal import Decimal
 
 from src.domain.ports.inbound.services.item_service_port import ItemServicePort
 from src.application.dtos.item_dtos import (
@@ -14,179 +13,173 @@ from src.application.dtos.item_dtos import (
     ItemDeleteResponseDTO,
     ItemSearchDTO
 )
-from src.domain.entities.item import Item
 from src.domain.ports.outbound.repositories.item_repository import ItemRepository
-from src.domain.exceptions import ItemNotFoundError, InvalidItemDataError
+
+# Импорт всех use case'ов
+from src.application.use_cases.create_item_use_case import CreateItemUseCase
+from src.application.use_cases.get_item_by_id_use_case import (
+    GetItemByIdUseCase, 
+    GetItemByIdRequest
+)
+from src.application.use_cases.get_all_items_use_case import (
+    GetAllItemsUseCase, 
+    GetAllItemsRequest
+)
+from src.application.use_cases.update_item_use_case import (
+    UpdateItemUseCase, 
+    UpdateItemRequest
+)
+from src.application.use_cases.delete_item_use_case import (
+    DeleteItemUseCase, 
+    DeleteItemRequest
+)
+from src.application.use_cases.search_items_use_case import SearchItemsUseCase
 
 
 class ItemService(ItemServicePort):
     """
-    Application service implementing item use cases.
-    Orchestrates domain logic and coordinates with repositories.
+    Сервис приложения для работы с элементами.
+    Оркестрирует выполнение use case'ов и предоставляет единый интерфейс для контроллеров.
+    
+    Сервис больше не содержит бизнес-логику напрямую, а делегирует выполнение
+    соответствующим use case'ам, что обеспечивает лучшую модульность и тестируемость.
     """
     
-    def __init__(self, item_repository: ItemRepository):
-        self._item_repository = item_repository
+    def __init__(self, item_repository: ItemRepository) -> None:
+        """
+        Инициализация сервиса и всех use case'ов.
+        
+        Аргументы:
+            item_repository: Репозиторий для работы с элементами
+        """
+        self._item_repository: ItemRepository = item_repository
+        
+        # Инициализация всех use case'ов
+        self._create_item_use_case = CreateItemUseCase(item_repository)
+        self._get_item_by_id_use_case = GetItemByIdUseCase(item_repository)
+        self._get_all_items_use_case = GetAllItemsUseCase(item_repository)
+        self._update_item_use_case = UpdateItemUseCase(item_repository)
+        self._delete_item_use_case = DeleteItemUseCase(item_repository)
+        self._search_items_use_case = SearchItemsUseCase(item_repository)
     
     async def create_item(self, item_data: ItemCreateDTO) -> ItemResponseDTO:
         """
-        Create a new item.
+        Создание нового элемента.
         
-        Args:
-            item_data: Data for creating the item
+        Аргументы:
+            item_data: Данные для создания элемента
             
-        Returns:
-            Created item response
+        Возвращает:
+            Ответ с данными созданного элемента
             
-        Raises:
-            InvalidItemDataError: If item data is invalid
+        Исключения:
+            InvalidItemDataError: При некорректных данных элемента
         """
-        try:
-            # Convert DTO to domain entity
-            item = Item(
-                id=None,
-                name=item_data.name,
-                description=item_data.description,
-                price=item_data.price,
-                in_stock=item_data.in_stock
-            )
-            
-            # Create item through repository
-            created_item = await self._item_repository.create(item)
-            
-            # Convert domain entity to response DTO
-            return self._item_to_response_dto(created_item)
-            
-        except ValueError as e:
-            raise InvalidItemDataError(str(e))
+        result = await self._create_item_use_case.execute(item_data)
+        
+        if not result.success:
+            from src.domain.exceptions import InvalidItemDataError
+            raise InvalidItemDataError(result.message or "Ошибка создания элемента")
+        
+        return result.data
     
     async def get_item_by_id(self, item_id: int) -> ItemResponseDTO:
         """
-        Retrieve an item by its ID.
+        Получение элемента по его идентификатору.
         
-        Args:
-            item_id: Unique identifier of the item
+        Аргументы:
+            item_id: Уникальный идентификатор элемента
             
-        Returns:
-            Item response
+        Возвращает:
+            Ответ с данными элемента
             
-        Raises:
-            ItemNotFoundError: If item is not found
+        Исключения:
+            ItemNotFoundError: Если элемент не найден
         """
-        item = await self._item_repository.get_by_id(item_id)
-        if not item:
+        request = GetItemByIdRequest(item_id)
+        result = await self._get_item_by_id_use_case.execute(request)
+        
+        if not result.success:
+            from src.domain.exceptions import ItemNotFoundError
             raise ItemNotFoundError(item_id)
         
-        return self._item_to_response_dto(item)
+        return result.data
     
     async def get_all_items(self) -> List[ItemResponseDTO]:
         """
-        Retrieve all items.
+        Получение всех элементов.
         
-        Returns:
-            List of item responses
+        Возвращает:
+            Список ответов с данными всех элементов
         """
-        items = await self._item_repository.get_all()
-        return [self._item_to_response_dto(item) for item in items]
+        request = GetAllItemsRequest()
+        result = await self._get_all_items_use_case.execute(request)
+        
+        # Для get_all операция всегда должна возвращать список (даже пустой)
+        return result.data or []
     
     async def update_item(self, item_id: int, item_data: ItemUpdateDTO) -> ItemResponseDTO:
         """
-        Update an existing item.
+        Обновление существующего элемента.
         
-        Args:
-            item_id: Unique identifier of the item
-            item_data: Data for updating the item
+        Аргументы:
+            item_id: Уникальный идентификатор элемента
+            item_data: Данные для обновления элемента
             
-        Returns:
-            Updated item response
+        Возвращает:
+            Ответ с данными обновленного элемента
             
-        Raises:
-            ItemNotFoundError: If item is not found
-            InvalidItemDataError: If item data is invalid
+        Исключения:
+            ItemNotFoundError: Если элемент не найден
+            InvalidItemDataError: При некорректных данных элемента
         """
-        # Check if item exists
-        existing_item = await self._item_repository.get_by_id(item_id)
-        if not existing_item:
-            raise ItemNotFoundError(item_id)
+        request = UpdateItemRequest(item_id, item_data)
+        result = await self._update_item_use_case.execute(request)
         
-        try:
-            # Update only provided fields
-            if item_data.name is not None:
-                existing_item.name = item_data.name
-            if item_data.description is not None:
-                existing_item.update_description(item_data.description)
-            if item_data.price is not None:
-                existing_item.update_price(item_data.price)
-            if item_data.in_stock is not None:
-                if item_data.in_stock:
-                    existing_item.set_in_stock()
-                else:
-                    existing_item.set_out_of_stock()
-            
-            # Validate updated item
-            existing_item.__post_init__()
-            
-            # Update through repository
-            updated_item = await self._item_repository.update(existing_item)
-            if not updated_item:
+        if not result.success:
+            # Определяем тип исключения на основе сообщения
+            if "не найден" in (result.message or ""):
+                from src.domain.exceptions import ItemNotFoundError
                 raise ItemNotFoundError(item_id)
-            
-            return self._item_to_response_dto(updated_item)
-            
-        except ValueError as e:
-            raise InvalidItemDataError(str(e))
+            else:
+                from src.domain.exceptions import InvalidItemDataError
+                raise InvalidItemDataError(result.message or "Ошибка обновления элемента")
+        
+        return result.data
     
     async def delete_item(self, item_id: int) -> ItemDeleteResponseDTO:
         """
-        Delete an item.
+        Удаление элемента.
         
-        Args:
-            item_id: Unique identifier of the item
+        Аргументы:
+            item_id: Уникальный идентификатор элемента
             
-        Returns:
-            Deletion confirmation response
+        Возвращает:
+            Подтверждение удаления элемента
             
-        Raises:
-            ItemNotFoundError: If item is not found
+        Исключения:
+            ItemNotFoundError: Если элемент не найден
         """
-        # Get item before deletion for response
-        item = await self._item_repository.get_by_id(item_id)
-        if not item:
+        request = DeleteItemRequest(item_id)
+        result = await self._delete_item_use_case.execute(request)
+        
+        if not result.success:
+            from src.domain.exceptions import ItemNotFoundError
             raise ItemNotFoundError(item_id)
         
-        # Delete item
-        deleted = await self._item_repository.delete(item_id)
-        if not deleted:
-            raise ItemNotFoundError(item_id)
-        
-        return ItemDeleteResponseDTO(
-            message=f"Item '{item.name}' deleted successfully",
-            deleted_item_id=item_id,
-            deleted_item_name=item.name
-        )
+        return result.data
     
     async def search_items(self, search_data: ItemSearchDTO) -> List[ItemResponseDTO]:
         """
-        Search items by query.
+        Поиск элементов по запросу.
         
-        Args:
-            search_data: Search parameters
+        Аргументы:
+            search_data: Параметры поиска
             
-        Returns:
-            List of matching item responses
+        Возвращает:
+            Список найденных элементов
         """
-        items = await self._item_repository.search_by_name(search_data.query)
-        return [self._item_to_response_dto(item) for item in items]
-    
-    def _item_to_response_dto(self, item: Item) -> ItemResponseDTO:
-        """Convert domain entity to response DTO."""
-        if item.id is None:
-            raise ValueError("Item ID cannot be None for response DTO")
+        result = await self._search_items_use_case.execute(search_data)
         
-        return ItemResponseDTO(
-            id=item.id,
-            name=item.name,
-            description=item.description,
-            price=item.price,
-            in_stock=item.in_stock
-        )
+        # Для поиска всегда возвращаем список (даже пустой)
+        return result.data or []

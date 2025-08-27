@@ -2,8 +2,7 @@ from typing import AsyncGenerator
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 from ..config.settings import settings
 
@@ -40,7 +39,9 @@ SessionLocal = sessionmaker(
 )
 
 # Base class for ORM models
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """База данных для SQLAlchemy моделей."""
+    pass
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:

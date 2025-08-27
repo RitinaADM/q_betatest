@@ -78,28 +78,31 @@ class TestSQLAlchemyItemRepositoryAdapter:
         mock_session.flush = AsyncMock()
         mock_session.refresh = AsyncMock()
         
-        # Mock the model creation and conversion
-        with patch.object(ItemModel, 'from_domain_entity', return_value=created_model) as mock_from_domain:
-            with patch.object(created_model, 'to_domain_entity') as mock_to_domain:
-                expected_item = Item(
-                    id=1,
-                    name=new_item.name,
-                    description=new_item.description,
-                    price=new_item.price,
-                    in_stock=new_item.in_stock
-                )
-                mock_to_domain.return_value = expected_item
-                
-                # Act
-                result = await repository.create(new_item)
-                
-                # Assert
-                mock_from_domain.assert_called_once_with(new_item)
-                mock_session.add.assert_called_once_with(created_model)
-                mock_session.flush.assert_called_once()
-                mock_session.refresh.assert_called_once_with(created_model)
-                mock_to_domain.assert_called_once()
-                assert result == expected_item
+        # Mock exists_by_name to return False (no duplicate)
+        with patch.object(repository, 'exists_by_name', return_value=False) as mock_exists:
+            # Mock the model creation and conversion
+            with patch.object(ItemModel, 'from_domain_entity', return_value=created_model) as mock_from_domain:
+                with patch.object(created_model, 'to_domain_entity') as mock_to_domain:
+                    expected_item = Item(
+                        id=1,
+                        name=new_item.name,
+                        description=new_item.description,
+                        price=new_item.price,
+                        in_stock=new_item.in_stock
+                    )
+                    mock_to_domain.return_value = expected_item
+                    
+                    # Act
+                    result = await repository.create(new_item)
+                    
+                    # Assert
+                    mock_exists.assert_called_once_with(new_item.name)
+                    mock_from_domain.assert_called_once_with(new_item)
+                    mock_session.add.assert_called_once_with(created_model)
+                    mock_session.flush.assert_called_once()
+                    mock_session.refresh.assert_called_once_with(created_model)
+                    mock_to_domain.assert_called_once()
+                    assert result == expected_item
 
     @pytest.mark.asyncio
     async def test_create_item_duplicate_error(self, repository, mock_session):
@@ -113,19 +116,17 @@ class TestSQLAlchemyItemRepositoryAdapter:
             in_stock=True
         )
         
-        mock_session.add = MagicMock()
-        mock_session.flush = AsyncMock(side_effect=IntegrityError("", "", ""))
-        mock_session.rollback = AsyncMock()
-        
-        with patch.object(ItemModel, 'from_domain_entity') as mock_from_domain:
-            mock_from_domain.return_value = MagicMock()
-            
+        # Mock exists_by_name to return True (duplicate found)
+        with patch.object(repository, 'exists_by_name', return_value=True) as mock_exists:
             # Act & Assert
             with pytest.raises(DuplicateItemError) as exc_info:
                 await repository.create(duplicate_item)
             
             assert duplicate_item.name in str(exc_info.value)
-            mock_session.rollback.assert_called_once()
+            mock_exists.assert_called_once_with(duplicate_item.name)
+            # Session methods should not be called since we detect duplicate early
+            mock_session.add.assert_not_called()
+            mock_session.flush.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_get_by_id_found(self, repository, mock_session, sample_item, sample_item_model):
@@ -419,26 +420,29 @@ class TestSQLAlchemyItemRepositoryAdapter:
         mock_session.flush = AsyncMock()
         mock_session.refresh = AsyncMock()
         
-        with patch.object(ItemModel, 'from_domain_entity', return_value=created_model):
-            with patch.object(created_model, 'to_domain_entity') as mock_to_domain:
-                expected_item = Item(
-                    id=5,
-                    name=new_item.name,
-                    description=new_item.description,
-                    price=new_item.price,
-                    in_stock=new_item.in_stock
-                )
-                mock_to_domain.return_value = expected_item
-                
-                # Act
-                result = await repository.create(new_item)
-                
-                # Assert
-                assert result.id == 5
-                assert result.name == new_item.name
-                mock_session.add.assert_called_once()
-                mock_session.flush.assert_called_once()
-                mock_session.refresh.assert_called_once()
+        # Mock exists_by_name to return False (no duplicate)
+        with patch.object(repository, 'exists_by_name', return_value=False) as mock_exists:
+            with patch.object(ItemModel, 'from_domain_entity', return_value=created_model):
+                with patch.object(created_model, 'to_domain_entity') as mock_to_domain:
+                    expected_item = Item(
+                        id=5,
+                        name=new_item.name,
+                        description=new_item.description,
+                        price=new_item.price,
+                        in_stock=new_item.in_stock
+                    )
+                    mock_to_domain.return_value = expected_item
+                    
+                    # Act
+                    result = await repository.create(new_item)
+                    
+                    # Assert
+                    mock_exists.assert_called_once_with(new_item.name)
+                    assert result.id == 5
+                    assert result.name == new_item.name
+                    mock_session.add.assert_called_once()
+                    mock_session.flush.assert_called_once()
+                    mock_session.refresh.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_repository_error_handling(self, repository, mock_session):
