@@ -1,539 +1,542 @@
-# FastAPI Hexagonal Architecture Application
+# FastAPI Приложение с Гексагональной Архитектурой
 
-A modern FastAPI application implementing hexagonal architecture (ports and adapters) with database persistence, Dishka dependency injection, comprehensive testing, and proper separation of concerns.
+🌐 **[English Version / Английская версия](README_EN.md)**
 
-## 🏗️ Architecture
+Современное FastAPI приложение, реализующее гексагональную архитектуру (порты и адаптеры) с сохранением данных в базе данных, внедрением зависимостей Dishka, комплексным тестированием и правильным разделением ответственности.
 
-This project follows **Hexagonal Architecture** principles with clear **Ports and Adapters** pattern, ensuring:
-- **Domain isolation**: Business logic is completely independent of external concerns
-- **Inversion of dependencies**: Domain defines interfaces, infrastructure implements them
-- **Testability**: Easy to mock and test each layer independently
-- **Flexibility**: Can swap databases, APIs, or frameworks without changing business logic
-- **Maintainability**: Clear boundaries and responsibilities for each component
+## 🏗️ Архитектура
 
-### Hexagonal Architecture Layers
+Этот проект следует принципам **Гексагональной Архитектуры** с четким паттерном **Порты и Адаптеры**, обеспечивая:
+- **Изоляцию домена**: Бизнес-логика полностью независима от внешних зависимостей
+- **Инверсию зависимостей**: Домен определяет интерфейсы, инфраструктура их реализует
+- **Тестируемость**: Легко мокировать и тестировать каждый слой независимо
+- **Гибкость**: Можно менять базы данных, API или фреймворки без изменения бизнес-логики
+- **Сопровождаемость**: Четкие границы и ответственность для каждого компонента
+
+### Слои Гексагональной Архитектуры
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                        INBOUND ADAPTERS                                 │
+│                        ВХОДЯЩИЕ АДАПТЕРЫ                                 │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│  │   FastAPI REST   │  │   Health Check   │  │   Future: CLI    │      │
-│  │   Controllers    │  │   Controllers    │  │   GraphQL, gRPC  │      │
+│  │   FastAPI REST   │  │   Health Check   │  │   Будущее: CLI   │      │
+│  │   Контроллеры    │  │   Контроллеры    │  │   GraphQL, gRPC  │      │
 │  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
 └──────────────────────────────────────────────────────────────────────────┘
                                    │
                              ┌─────────────┐
-                             │ INBOUND     │
-                             │ PORTS       │ ← Interface contracts
-                             │ (Services)  │   for use cases
+                             │ ВХОДЯЩИЕ    │
+                             │ ПОРТЫ       │ ← Интерфейсные контракты
+                             │ (Сервисы)   │   для случаев использования
                              └─────────────┘
                                    │
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                         APPLICATION LAYER                               │
+│                         СЛОЙ ПРИЛОЖЕНИЯ                                 │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│  │   Item Service   │  │   DTOs & Data    │  │   Application    │      │
-│  │   (Use Cases)    │  │   Transfer       │  │   Exceptions     │      │
-│  │   Business Flow  │  │   Objects        │  │   & Validation   │      │
+│  │   Сервис Item    │  │   DTO и Передача │  │   Исключения     │      │
+│  │   (Случаи исп.)  │  │   Данных         │  │   Приложения     │      │
+│  │   Бизнес-поток   │  │   Объекты        │  │   и Валидация    │      │
 │  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
 └──────────────────────────────────────────────────────────────────────────┘
                                    │
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                           DOMAIN LAYER                                  │
+│                           СЛОЙ ДОМЕНА                                   │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│  │   Item Entity    │  │   Value Objects  │  │   Domain         │      │
-│  │   (Core Business │  │   (Immutable     │  │   Exceptions     │      │
-│  │    Rules)        │  │    Values)       │  │   & Rules        │      │
+│  │   Сущность Item  │  │   Объекты-       │  │   Исключения     │      │
+│  │   (Основные      │  │   Значения       │  │   Домена         │      │
+│  │    Бизнес-       │  │   (Неизменяемые  │  │   и Правила      │      │
+│  │    Правила)      │  │    Значения)     │  │                  │      │
 │  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
 └──────────────────────────────────────────────────────────────────────────┘
                                    │
                              ┌─────────────┐
-                             │ OUTBOUND    │
-                             │ PORTS       │ ← Interface contracts
-                             │ (Repository │   for external deps
-                             │  & Cache)   │
+                             │ ИСХОДЯЩИЕ   │
+                             │ ПОРТЫ       │ ← Интерфейсные контракты
+                             │ (Репозиторий│   для внешних зависимостей
+                             │  и Кэш)     │
                              └─────────────┘
                                    │
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                       OUTBOUND ADAPTERS                                 │
+│                       ИСХОДЯЩИЕ АДАПТЕРЫ                                │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│  │   SQLAlchemy     │  │   Redis Cache    │  │   Future: Event  │      │
-│  │   Database       │  │   Adapter        │  │   Streaming,     │      │
-│  │   Adapter        │  │   (Prepared)     │  │   External APIs  │      │
+│  │   SQLAlchemy     │  │   Redis Кэш      │  │   Будущее: Event │      │
+│  │   База Данных    │  │   Адаптер        │  │   Streaming,     │      │
+│  │   Адаптер        │  │   (Подготовлен)  │  │   Внешние API    │      │
 │  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
 └──────────────────────────────────────────────────────────────────────────┘
                                    │
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                       INFRASTRUCTURE                                    │
+│                       ИНФРАСТРУКТУРА                                    │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│  │   Database       │  │   Dishka DI      │  │   Configuration  │      │
-│  │   Configuration  │  │   Container      │  │   & Settings     │      │
-│  │   & Models       │  │   & Providers    │  │   Management     │      │
+│  │   Конфигурация   │  │   Dishka DI      │  │   Конфигурация   │      │
+│  │   Базы Данных    │  │   Контейнер      │  │   и Настройки    │      │
+│  │   и Модели       │  │   и Провайдеры   │  │   Управления     │      │
 │  └──────────────────┘  └──────────────────┘  └──────────────────┘      │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 🌟 Features
+## 🌟 Возможности
 
-### Architecture & Design
-- **True Hexagonal Architecture**: Ports and adapters with clear boundaries
-- **Dependency Inversion**: Domain layer defines interfaces, infrastructure implements
-- **SOLID Principles**: Single responsibility, open/closed, dependency inversion
-- **Clean Code**: Separation of concerns with testable components
+### Архитектура и Дизайн
+- **Истинная Гексагональная Архитектура**: Порты и адаптеры с четкими границами
+- **Инверсия Зависимостей**: Слой домена определяет интерфейсы, инфраструктура реализует
+- **Принципы SOLID**: Единственная ответственность, открыт/закрыт, инверсия зависимостей
+- **Чистый Код**: Разделение ответственности с тестируемыми компонентами
 
-### Technical Features
-- **Database Persistence**: SQLite with async SQLAlchemy 2.0 ORM
-- **Advanced Dependency Injection**: Dishka DI container with provider pattern
-- **Full Async Support**: End-to-end async/await implementation
-- **Database Migrations**: Alembic for schema versioning and management
-- **Type Safety**: Complete type annotations with Pydantic v2 models
-- **Input Validation**: Comprehensive validation with custom error handling
-- **API Documentation**: Auto-generated OpenAPI 3.0 docs with examples
-- **Health Monitoring**: System and database connectivity health checks
-- **Error Handling**: Domain-specific exceptions with proper HTTP responses
-- **Configuration Management**: Environment-based settings with Pydantic Settings
+### Технические Возможности
+- **Сохранение в Базе Данных**: SQLite с асинхронным SQLAlchemy 2.0 ORM
+- **Продвинутое Внедрение Зависимостей**: Dishka DI контейнер с паттерном провайдера
+- **Полная Асинхронная Поддержка**: Сквозная реализация async/await
+- **Миграции Базы Данных**: Alembic для версионирования схем и управления
+- **Типобезопасность**: Полные аннотации типов с Pydantic v2 моделями
+- **Валидация Ввода**: Комплексная валидация с пользовательской обработкой ошибок
+- **Документация API**: Автогенерируемая OpenAPI 3.0 документация с примерами
+- **Мониторинг Здоровья**: Проверки здоровья системы и подключения к базе данных
+- **Обработка Ошибок**: Специфичные для домена исключения с правильными HTTP ответами
+- **Управление Конфигурацией**: Настройки на основе окружения с Pydantic Settings
 
-### Testing & Quality
-- **Comprehensive Testing**: Unit, integration, and API tests with pytest
-- **Test Isolation**: Proper mocking and dependency injection for tests
-- **Code Coverage**: Coverage reporting and analysis
-- **Factory Pattern**: Test data generation with Factory Boy
-- **Async Testing**: Full async test support with pytest-asyncio
+### Тестирование и Качество
+- **Комплексное Тестирование**: Модульные, интеграционные и API тесты с pytest
+- **Изоляция Тестов**: Правильное мокирование и внедрение зависимостей для тестов
+- **Покрытие Кода**: Отчеты о покрытии и анализ
+- **Паттерн Фабрики**: Генерация тестовых данных с Factory Boy
+- **Асинхронное Тестирование**: Полная поддержка асинхронных тестов с pytest-asyncio
 
-## 📋 API Endpoints
+## 📋 API Эндпоинты
 
-### Health & Info
-- `GET /` - Welcome message
-- `GET /health` - Health check with database connectivity
+### Здоровье и Информация
+- `GET /` - Приветственное сообщение
+- `GET /health` - Проверка здоровья с подключением к базе данных
 
-### Items Management
-- `GET /items` - Get all items
-- `GET /items/{item_id}` - Get item by ID
-- `POST /items` - Create new item
-- `PUT /items/{item_id}` - Update item
-- `DELETE /items/{item_id}` - Delete item
-- `GET /items/search/{query}` - Search items by name/description
+### Управление Элементами
+- `GET /items` - Получить все элементы
+- `GET /items/{item_id}` - Получить элемент по ID
+- `POST /items` - Создать новый элемент
+- `PUT /items/{item_id}` - Обновить элемент
+- `DELETE /items/{item_id}` - Удалить элемент
+- `GET /items/search/{query}` - Поиск элементов по имени/описанию
 
-## ⚙️ Setup & Installation
+## ⚙️ Настройка и Установка
 
-### Prerequisites
-- Python 3.9 or higher
+### Предварительные требования
+- Python 3.9 или выше
 - Git
 
-### 1. Clone & Navigate
+### 1. Клонирование и Навигация
 ```bash
 cd path/to/your/project
 ```
 
-### 2. Create Virtual Environment
+### 2. Создание Виртуального Окружения
 
-**Option A: Using existing conda environment (recommended for this project)**
+**Вариант A: Использование существующего conda окружения (рекомендуется для этого проекта)**
 ```bash
 conda activate beta2
 ```
 
-**Option B: Using Python venv**
+**Вариант B: Использование Python venv**
 ```bash
 python -m venv venv
 ```
 
-**Option C: Using new conda environment**
+**Вариант C: Использование нового conda окружения**
 ```bash
 conda create -n fastapi-hex python=3.9
 conda activate fastapi-hex
 ```
 
-### 3. Activate Virtual Environment
+### 3. Активация Виртуального Окружения
 
-**On Windows (PowerShell):**
+**В Windows (PowerShell):**
 ```powershell
 venv\Scripts\Activate.ps1
 ```
 
-**On Windows (Command Prompt):**
+**В Windows (Command Prompt):**
 ```cmd
 venv\Scripts\activate.bat
 ```
 
-**On macOS/Linux:**
+**В macOS/Linux:**
 ```bash
 source venv/bin/activate
 ```
 
-**If PowerShell execution policy is restricted:**
+**Если политика выполнения PowerShell ограничена:**
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 venv\Scripts\Activate.ps1
 ```
 
-### 4. Install Dependencies
+### 4. Установка Зависимостей
 ```bash
 pip install -r requirements.txt
 ```
 
-### 5. Initialize Database
+### 5. Инициализация Базы Данных
 
-**Option A: Using initialization script (recommended)**
+**Вариант A: Использование скрипта инициализации (рекомендуется)**
 ```bash
 python init_db.py init --with-data
 ```
 
-**Option B: Using Alembic migrations**
+**Вариант B: Использование миграций Alembic**
 ```bash
 alembic upgrade head
-python init_db.py seed  # Optional: add sample data
+python init_db.py seed  # Опционально: добавить примеры данных
 ```
 
-### 6. Run the Application
+### 6. Запуск Приложения
 
-**Development mode (with auto-reload):**
+**Режим разработки (с авто-перезагрузкой):**
 ```bash
 python main.py
 ```
 
-**Or using uvicorn directly:**
+**Или используя uvicorn напрямую:**
 ```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Production mode:**
+**Продуктивный режим:**
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-## 🔎 Database Management
+## 🔎 Управление Базой Данных
 
-### Initialize Database
+### Инициализация Базы Данных
 ```bash
-python init_db.py init          # Create tables only
-python init_db.py init --with-data  # Create tables and add sample data
+python init_db.py init          # Создать только таблицы
+python init_db.py init --with-data  # Создать таблицы и добавить примеры данных
 ```
 
-### Reset Database
+### Сброс Базы Данных
 ```bash
-python init_db.py reset         # Reset tables only
-python init_db.py reset --with-data # Reset and add sample data
+python init_db.py reset         # Сбросить только таблицы
+python init_db.py reset --with-data # Сбросить и добавить примеры данных
 ```
 
-### Add Sample Data
+### Добавление Примеров Данных
 ```bash
 python init_db.py seed
 ```
 
-### Database Migrations
+### Миграции Базы Данных
 ```bash
-# Create new migration
-alembic revision --autogenerate -m "Description of changes"
+# Создать новую миграцию
+alembic revision --autogenerate -m "Описание изменений"
 
-# Apply migrations
+# Применить миграции
 alembic upgrade head
 
-# Rollback migration
+# Откат миграции
 alembic downgrade -1
 ```
 
-## 📋 API Documentation
+## 📋 Документация API
 
-Once the server is running, access the interactive documentation:
+После запуска сервера, получите доступ к интерактивной документации:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-## 📜 Project Structure
+## 📜 Структура Проекта
 
-The project follows a strict hexagonal architecture with clear separation of layers:
+Проект следует строгой гексагональной архитектуре с четким разделением слоев:
 
 ```
 q_betatest/
 ├── src/
-│   ├── domain/                           # 🏛️ DOMAIN LAYER (Core Business Logic)
+│   ├── domain/                           # 🏛️ СЛОЙ ДОМЕНА (Основная Бизнес-Логика)
 │   │   ├── entities/
-│   │   │   ├── item.py                      # Item entity with business rules
-│   │   │   └── value_objects.py             # Immutable value objects
-│   │   ├── ports/                        # 🔌 PORTS (Interface Contracts)
-│   │   │   ├── inbound/                     # Driving side interfaces
+│   │   │   ├── item.py                      # Сущность Item с бизнес-правилами
+│   │   │   └── value_objects.py             # Неизменяемые объекты-значения
+│   │   ├── ports/                        # 🔌 ПОРТЫ (Интерфейсные Контракты)
+│   │   │   ├── inbound/                     # Интерфейсы входящей стороны
 │   │   │   │   └── services/
 │   │   │   │       ├── __init__.py
-│   │   │   │       └── item_service_port.py # Service interface (use cases)
-│   │   │   └── outbound/                    # Driven side interfaces
+│   │   │   │       └── item_service_port.py # Интерфейс сервиса (случаи исп.)
+│   │   │   └── outbound/                    # Интерфейсы исходящей стороны
 │   │   │       ├── repositories/
-│   │   │       │   └── item_repository.py   # Repository interface
+│   │   │       │   └── item_repository.py   # Интерфейс репозитория
 │   │   │       └── cache/
-│   │   │           └── item_cache_port.py   # Cache interface
-│   │   └── exceptions.py                 # Domain-specific exceptions
+│   │   │           └── item_cache_port.py   # Интерфейс кэша
+│   │   └── exceptions.py                 # Специфичные для домена исключения
 │   │
-│   ├── application/                      # 🎯 APPLICATION LAYER (Use Cases)
+│   ├── application/                      # 🎯 СЛОЙ ПРИЛОЖЕНИЯ (Случаи Использования)
 │   │   ├── services/
-│   │   │   └── item_service.py              # Service implementation (orchestration)
+│   │   │   └── item_service.py              # Реализация сервиса (оркестрация)
 │   │   ├── dtos/
-│   │   │   └── item_dtos.py                 # Data Transfer Objects
-│   │   └── exceptions.py                 # Application exceptions
+│   │   │   └── item_dtos.py                 # Объекты Передачи Данных
+│   │   └── exceptions.py                 # Исключения приложения
 │   │
-│   └── infrastructure/                   # 🔧 INFRASTRUCTURE LAYER
-│       ├── adapters/                     # 🔌 ADAPTERS (External Interface Implementations)
-│       │   ├── inbound/                     # REST API, CLI, etc.
+│   └── infrastructure/                   # 🔧 СЛОЙ ИНФРАСТРУКТУРЫ
+│       ├── adapters/                     # 🔌 АДАПТЕРЫ (Реализации Внешних Интерфейсов)
+│       │   ├── inbound/                     # REST API, CLI и т.д.
 │       │   │   └── rest/
-│       │   │       ├── item_controller.py   # FastAPI REST controllers
-│       │   │       ├── health_controller.py # Health check endpoints
-│       │   │       └── exception_handlers.py # HTTP error handling
-│       │   └── outbound/                    # Database, Cache, External APIs
+│       │   │       ├── item_controller.py   # FastAPI REST контроллеры
+│       │   │       ├── health_controller.py # Эндпоинты проверки здоровья
+│       │   │       └── exception_handlers.py # HTTP обработка ошибок
+│       │   └── outbound/                    # База данных, Кэш, Внешние API
 │       │       ├── database/
 │       │       │   └── sql/
-│       │       │       └── item_repository_adapter.py # SQLAlchemy implementation
+│       │       │       └── item_repository_adapter.py # Реализация SQLAlchemy
 │       │       └── cache/
-│       │           └── redis/               # Redis cache implementation (prepared)
+│       │           └── redis/               # Реализация Redis кэша (подготовлена)
 │       ├── config/
-│       │   └── settings.py                  # Application configuration
+│       │   └── settings.py                  # Конфигурация приложения
 │       ├── database/
-│       │   ├── config.py                    # Database connection setup
-│       │   └── models.py                    # SQLAlchemy ORM models
+│       │   ├── config.py                    # Настройка подключения к БД
+│       │   └── models.py                    # SQLAlchemy ORM модели
 │       ├── di/
-│       │   └── container.py                 # Dishka dependency injection container
+│       │   └── container.py                 # Dishka контейнер внедрения зависимостей
 │       ├── logging/
 │       │   ├── __init__.py
-│       │   └── config.py                    # Logging configuration
+│       │   └── config.py                    # Конфигурация логирования
 │       └── repositories/
-│           └── item_repository_impl.py      # Legacy repository (being migrated)
+│           └── item_repository_impl.py      # Устаревший репозиторий (мигрируется)
 │
-├── tests/                                # 🧪 COMPREHENSIVE TEST SUITE
-│   ├── unit/                                # Unit tests for isolated components
-│   │   ├── test_item_repository.py             # Repository layer tests
-│   │   ├── test_dishka_container.py            # DI container tests
-│   │   └── test_input_validation.py            # Input validation tests
-│   ├── integration/                         # Integration tests
-│   │   └── test_item_repository.py             # Database integration tests
-│   └── conftest.py                          # Pytest configuration and fixtures
+├── tests/                                # 🧪 КОМПЛЕКСНЫЙ НАБОР ТЕСТОВ
+│   ├── unit/                                # Модульные тесты для изолированных компонентов
+│   │   ├── test_item_repository.py             # Тесты слоя репозитория
+│   │   ├── test_dishka_container.py            # Тесты DI контейнера
+│   │   └── test_input_validation.py            # Тесты валидации ввода
+│   ├── integration/                         # Интеграционные тесты
+│   │   └── test_item_repository.py             # Тесты интеграции с БД
+│   └── conftest.py                          # Конфигурация Pytest и фикстуры
 │
-├── alembic/                              # 📊 DATABASE MIGRATIONS
+├── alembic/                              # 📊 МИГРАЦИИ БАЗЫ ДАННЫХ
 │   ├── versions/
-│   │   └── 385f34aedcb2_initial_migration.py   # Database schema migrations
-│   ├── env.py                               # Alembic environment configuration
-│   └── README                               # Migration instructions
+│   │   └── 385f34aedcb2_initial_migration.py   # Миграции схемы базы данных
+│   ├── env.py                               # Конфигурация окружения Alembic
+│   └── README                               # Инструкции по миграции
 │
-├── main.py                               # 🚀 Application entry point
-├── init_db.py                            # 🗄️ Database initialization script
-├── debug_test.py                         # 🐛 Debug utilities
-├── test_api.py                           # 🔍 Manual API testing script
-├── alembic.ini                           # ⚙️ Alembic configuration
-├── pytest.ini                            # 🧪 Pytest configuration
-├── requirements.txt                       # 📦 Python dependencies
-└── README.md                             # 📖 This documentation
+├── main.py                               # 🚀 Точка входа приложения
+├── init_db.py                            # 🗄️ Скрипт инициализации базы данных
+├── debug_test.py                         # 🐛 Утилиты отладки
+├── test_api.py                           # 🔍 Скрипт ручного тестирования API
+├── alembic.ini                           # ⚙️ Конфигурация Alembic
+├── pytest.ini                            # 🧪 Конфигурация Pytest
+├── requirements.txt                       # 📦 Зависимости Python
+└── README.md                             # 📖 Эта документация
 ```
 
-### 🏗️ Architecture Explanation
+### 🏗️ Объяснение Архитектуры
 
-#### Domain Layer (Core)
-- **Entities**: Business objects with identity and lifecycle
-- **Value Objects**: Immutable objects representing concepts
-- **Ports**: Interface contracts defining what the domain needs (outbound) and provides (inbound)
-- **Exceptions**: Domain-specific error definitions
+#### Слой Домена (Ядро)
+- **Сущности**: Бизнес-объекты с идентичностью и жизненным циклом
+- **Объекты-Значения**: Неизменяемые объекты, представляющие концепции
+- **Порты**: Интерфейсные контракты, определяющие что домен нуждается (исходящие) и предоставляет (входящие)
+- **Исключения**: Определения ошибок, специфичных для домена
 
-#### Application Layer (Orchestration)
-- **Services**: Implement inbound ports, orchestrate domain operations
-- **DTOs**: Data transfer objects for application boundaries
-- **Exceptions**: Application-level error handling
+#### Слой Приложения (Оркестрация)
+- **Сервисы**: Реализуют входящие порты, оркеструют операции домена
+- **DTO**: Объекты передачи данных для границ приложения
+- **Исключения**: Обработка ошибок на уровне приложения
 
-#### Infrastructure Layer (Technical Details)
-- **Inbound Adapters**: REST controllers, CLI handlers, message consumers
-- **Outbound Adapters**: Database repositories, cache implementations, external APIs
-- **Configuration**: Settings, database setup, dependency injection
-- **Cross-cutting Concerns**: Logging, monitoring, security
+#### Слой Инфраструктуры (Технические Детали)
+- **Входящие Адаптеры**: REST контроллеры, CLI обработчики, потребители сообщений
+- **Исходящие Адаптеры**: Репозитории баз данных, реализации кэша, внешние API
+- **Конфигурация**: Настройки, установка базы данных, внедрение зависимостей
+- **Сквозные Задачи**: Логирование, мониторинг, безопасность
 
-### 🔄 Dependency Flow
+### 🔄 Поток Зависимостей
 ```
-Inbound Adapters → Inbound Ports → Application Services → Outbound Ports → Outbound Adapters
+Входящие Адаптеры → Входящие Порты → Сервисы Приложения → Исходящие Порты → Исходящие Адаптеры
       ↓                ↓                   ↓                 ↓                ↓
-  REST API      Service Interface    Use Case Logic    Repository      Database
-   (FastAPI)    (item_service_port)   (ItemService)    Interface      (SQLAlchemy)
+  REST API      Интерфейс Сервиса    Логика Случая Исп.    Интерфейс      База Данных
+   (FastAPI)    (item_service_port)   (ItemService)       Репозитория     (SQLAlchemy)
 ```
 
-## 🧪 Testing
+## 🧪 Тестирование
 
-The hexagonal architecture with dependency injection makes testing comprehensive and maintainable:
+Гексагональная архитектура с внедрением зависимостей делает тестирование комплексным и сопровождаемым:
 
-### Test Structure
-- **Unit Tests**: Test individual components in isolation with mocked dependencies
-- **Integration Tests**: Test adapter implementations against real external systems
-- **API Tests**: End-to-end testing through REST endpoints
-- **Contract Tests**: Verify that adapters correctly implement port interfaces
+### Структура Тестов
+- **Модульные Тесты**: Тестируют отдельные компоненты в изоляции с мокированными зависимостями
+- **Интеграционные Тесты**: Тестируют реализации адаптеров против реальных внешних систем
+- **API Тесты**: Сквозное тестирование через REST эндпоинты
+- **Контрактные Тесты**: Проверяют, что адаптеры правильно реализуют интерфейсы портов
 
-### Running Tests
+### Запуск Тестов
 
-**Run all tests:**
+**Запустить все тесты:**
 ```bash
 pytest
 ```
 
-**Run with coverage:**
+**Запустить с покрытием:**
 ```bash
 pytest --cov=src --cov-report=html
 ```
 
-**Run specific test categories:**
+**Запустить определенные категории тестов:**
 ```bash
-# Unit tests only
+# Только модульные тесты
 pytest tests/unit/
 
-# Integration tests only
+# Только интеграционные тесты
 pytest tests/integration/
 
-# Async tests with detailed output
+# Асинхронные тесты с подробным выводом
 pytest -v -s tests/
 ```
 
-### Test Features
-- **Dishka DI Testing**: Proper dependency injection testing with container validation
-- **Async Test Support**: Full async/await testing with pytest-asyncio
-- **Database Testing**: In-memory SQLite for fast, isolated database tests
-- **Factory Pattern**: Consistent test data generation with Factory Boy
-- **Mocking**: Strategic mocking of external dependencies at port boundaries
+### Возможности Тестирования
+- **Тестирование Dishka DI**: Правильное тестирование внедрения зависимостей с валидацией контейнера
+- **Поддержка Асинхронных Тестов**: Полное тестирование async/await с pytest-asyncio
+- **Тестирование Базы Данных**: В памяти SQLite для быстрых, изолированных тестов БД
+- **Паттерн Фабрики**: Последовательная генерация тестовых данных с Factory Boy
+- **Мокирование**: Стратегическое мокирование внешних зависимостей на границах портов
 
-### Testing Strategy
-The architecture enables testing at multiple levels:
-1. **Domain Layer**: Pure unit tests with no external dependencies
-2. **Application Layer**: Service tests with mocked repositories
-3. **Adapter Layer**: Integration tests with real external systems
-4. **End-to-End**: Full application tests through REST API
+### Стратегия Тестирования
+Архитектура позволяет тестирование на нескольких уровнях:
+1. **Слой Домена**: Чистые модульные тесты без внешних зависимостей
+2. **Слой Приложения**: Тесты сервисов с мокированными репозиториями
+3. **Слой Адаптеров**: Интеграционные тесты с реальными внешними системами
+4. **Сквозные**: Полные тесты приложения через REST API
 
-### Manual API Testing
+### Ручное Тестирование API
 
-**Create an item:**
+**Создать элемент:**
 ```bash
 curl -X POST "http://localhost:8000/items" \
      -H "Content-Type: application/json" \
      -d '{
-       "name": "Gaming Laptop",
-       "description": "High-performance laptop for gaming",
+       "name": "Игровой ноутбук",
+       "description": "Высокопроизводительный ноутбук для игр",
        "price": 1299.99,
        "in_stock": true
      }'
 ```
 
-**Get all items:**
+**Получить все элементы:**
 ```bash
 curl "http://localhost:8000/items"
 ```
 
-**Get item by ID:**
+**Получить элемент по ID:**
 ```bash
 curl "http://localhost:8000/items/1"
 ```
 
-**Update an item:**
+**Обновить элемент:**
 ```bash
 curl -X PUT "http://localhost:8000/items/1" \
      -H "Content-Type: application/json" \
      -d '{
-       "name": "Updated Gaming Laptop",
+       "name": "Обновленный игровой ноутбук",
        "price": 1199.99
      }'
 ```
 
-**Search items:**
+**Поиск элементов:**
 ```bash
-curl "http://localhost:8000/items/search/laptop"
+curl "http://localhost:8000/items/search/ноутбук"
 ```
 
-**Delete an item:**
+**Удалить элемент:**
 ```bash
 curl -X DELETE "http://localhost:8000/items/1"
 ```
 
-## 🐛 Troubleshooting
+## 🐛 Устранение неполадок
 
-### PowerShell Execution Policy Issues
-If you encounter PowerShell execution policy issues on Windows:
+### Проблемы с Политикой Выполнения PowerShell
+Если вы столкнулись с проблемами политики выполнения PowerShell в Windows:
 
-1. **Temporarily change execution policy:**
+1. **Временно изменить политику выполнения:**
    ```powershell
    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
    ```
 
-2. **Or use Command Prompt instead:**
+2. **Или использовать Command Prompt вместо этого:**
    ```cmd
    venv\Scripts\activate.bat
    ```
 
-### Database Issues
+### Проблемы с Базой Данных
 
-1. **Database file permissions:**
-   - Ensure the application has write permissions in the project directory
-   - The SQLite database file `items.db` will be created automatically
+1. **Разрешения файла базы данных:**
+   - Убедитесь, что приложение имеет права записи в директории проекта
+   - Файл базы данных SQLite `items.db` будет создан автоматически
 
-2. **Migration conflicts:**
+2. **Конфликты миграций:**
    ```bash
-   # Reset database and migrations
+   # Сбросить базу данных и миграции
    python init_db.py reset
    alembic upgrade head
    ```
 
-3. **Dependency installation issues:**
-   - Use version ranges in requirements.txt to avoid compilation issues
-   - Ensure you're using Python 3.9+ for compatibility
+3. **Проблемы установки зависимостей:**
+   - Используйте диапазоны версий в requirements.txt для избежания проблем компиляции
+   - Убедитесь, что используете Python 3.9+ для совместимости
 
-## 🎯 Architecture Benefits
+## 🎯 Преимущества Архитектуры
 
-### 🏛️ Clean Architecture Principles
-1. **Domain Independence**: Core business logic is completely isolated from external concerns
-2. **Dependency Inversion**: High-level modules don't depend on low-level modules
-3. **Interface Segregation**: Well-defined, focused interfaces at architectural boundaries
-4. **Single Responsibility**: Each layer and component has a clear, single purpose
+### 🏛️ Принципы Чистой Архитектуры
+1. **Независимость Домена**: Основная бизнес-логика полностью изолирована от внешних зависимостей
+2. **Инверсия Зависимостей**: Высокоуровневые модули не зависят от низкоуровневых модулей
+3. **Разделение Интерфейсов**: Хорошо определенные, сфокусированные интерфейсы на архитектурных границах
+4. **Единственная Ответственность**: Каждый слой и компонент имеет четкую, единственную цель
 
-### 🔧 Technical Advantages
-1. **Testability**: Easy unit testing with dependency injection and mocking at port boundaries
-2. **Flexibility**: Swap databases, APIs, or frameworks without touching business logic
-3. **Maintainability**: Clear separation makes code easy to understand, modify, and extend
-4. **Scalability**: Well-defined boundaries enable horizontal and vertical scaling
-5. **Technology Independence**: Domain layer free from framework-specific code
-6. **Parallel Development**: Teams can work independently on different adapters
+### 🔧 Технические Преимущества
+1. **Тестируемость**: Легкое модульное тестирование с внедрением зависимостей и мокированием на границах портов
+2. **Гибкость**: Замена баз данных, API или фреймворков без изменения бизнес-логики
+3. **Сопровождаемость**: Четкое разделение делает код легким для понимания, изменения и расширения
+4. **Масштабируемость**: Хорошо определенные границы позволяют горизонтальное и вертикальное масштабирование
+5. **Технологическая Независимость**: Слой домена свободен от специфичного для фреймворка кода
+6. **Параллельная Разработка**: Команды могут работать независимо над различными адаптерами
 
-### 🚀 Modern Development Features
-1. **Type Safety**: Full type annotations prevent runtime errors
-2. **Async Performance**: Non-blocking I/O for high throughput
-3. **Dependency Injection**: Dishka provides enterprise-grade DI with lifecycle management
-4. **Configuration Management**: Environment-based configuration with validation
-5. **Database Migrations**: Versioned schema changes with rollback support
+### 🚀 Возможности Современной Разработки
+1. **Типобезопасность**: Полные аннотации типов предотвращают ошибки времени выполнения
+2. **Асинхронная Производительность**: Неблокирующий I/O для высокой пропускной способности
+3. **Внедрение Зависимостей**: Dishka обеспечивает DI корпоративного уровня с управлением жизненным циклом
+4. **Управление Конфигурацией**: Конфигурация на основе окружения с валидацией
+5. **Миграции Базы Данных**: Версионированные изменения схемы с поддержкой отката
 
-## 🔮 Future Enhancements
+## 🔮 Будущие Улучшения
 
-### 🔐 Security & Authentication
-- [ ] JWT-based authentication system
-- [ ] Role-based access control (RBAC)
-- [ ] API key management
-- [ ] Rate limiting and throttling
+### 🔐 Безопасность и Аутентификация
+- [ ] Система аутентификации на основе JWT
+- [ ] Контроль доступа на основе ролей (RBAC)
+- [ ] Управление API ключами
+- [ ] Ограничение скорости и дросселирование
 
-### 📊 Performance & Scaling
-- [ ] Redis caching layer implementation
-- [ ] Database connection pooling optimization
-- [ ] Async background task processing
-- [ ] Horizontal scaling with load balancing
+### 📊 Производительность и Масштабирование
+- [ ] Реализация слоя кэширования Redis
+- [ ] Оптимизация пулинга подключений к базе данных
+- [ ] Асинхронная обработка фоновых задач
+- [ ] Горизонтальное масштабирование с балансировкой нагрузки
 
-### 🗄️ Database Support
-- [ ] PostgreSQL adapter implementation
-- [ ] MySQL adapter implementation
-- [ ] MongoDB adapter for document storage
-- [ ] Database sharding strategies
+### 🗄️ Поддержка Баз Данных
+- [ ] Реализация адаптера PostgreSQL
+- [ ] Реализация адаптера MySQL
+- [ ] Адаптер MongoDB для хранения документов
+- [ ] Стратегии шардинга базы данных
 
-### 🔍 Observability
-- [ ] Structured logging with correlation IDs
-- [ ] Prometheus metrics collection
-- [ ] Distributed tracing with OpenTelemetry
-- [ ] Health check enhancements
+### 🔍 Наблюдаемость
+- [ ] Структурированное логирование с ID корреляции
+- [ ] Сбор метрик Prometheus
+- [ ] Распределенная трассировка с OpenTelemetry
+- [ ] Улучшения проверки здоровья
 
-### 🛠️ Development Experience
-- [ ] Docker containerization
-- [ ] Kubernetes deployment manifests
-- [ ] CI/CD pipeline with GitHub Actions
-- [ ] API versioning strategy
-- [ ] GraphQL adapter implementation
-- [ ] Event-driven architecture with message queues
+### 🛠️ Опыт Разработки
+- [ ] Контейнеризация Docker
+- [ ] Манифесты развертывания Kubernetes
+- [ ] CI/CD пайплайн с GitHub Actions
+- [ ] Стратегия версионирования API
+- [ ] Реализация адаптера GraphQL
+- [ ] Событийно-ориентированная архитектура с очередями сообщений
 
-### 🧪 Testing Improvements
-- [ ] Property-based testing with Hypothesis
-- [ ] Load testing with Locust
-- [ ] Contract testing between services
-- [ ] Mutation testing for test quality
+### 🧪 Улучшения Тестирования
+- [ ] Тестирование на основе свойств с Hypothesis
+- [ ] Нагрузочное тестирование с Locust
+- [ ] Контрактное тестирование между сервисами
+- [ ] Мутационное тестирование для качества тестов
 
-### 📚 Documentation
-- [ ] Architecture Decision Records (ADRs)
-- [ ] API documentation with examples
-- [ ] Development guides and tutorials
-- [ ] Deployment and operations manual
+### 📚 Документация
+- [ ] Записи Архитектурных Решений (ADR)
+- [ ] Документация API с примерами
+- [ ] Руководства по разработке и учебные материалы
+- [ ] Руководство по развертыванию и эксплуатации
